@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DietAnalyst - aplikacja</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; }
+    .phone-card { border-radius: 40px; }
+    .glass { backdrop-filter: blur(14px); }
+    .hide-scroll::-webkit-scrollbar { display: none; }
+    .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    .tab-active { background: white; color: #2563eb; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+    .page { display: none; }
+    .page.active { display: block; }
+    .progress-ring { background: conic-gradient(#22c55e var(--p), #e5e7eb 0); }
+  </style>
+</head>
+<body class="bg-gray-200 min-h-screen p-4 md:p-8">
+  <div id="authShell" class="min-h-[calc(100vh-4rem)] flex items-center justify-center"></div>
+
+  <div id="appShell" class="max-w-7xl mx-auto hidden">
+    <header class="bg-white/90 glass rounded-[32px] shadow-xl border border-gray-100 p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">DietAnalyst</p>
+        <h1 class="text-2xl md:text-3xl font-black text-slate-800">System planowania diety i analizy nawyków</h1>
+        <p class="text-sm text-slate-500 mt-1">Makieta funkcjonalna: dziennik posiłków, baza produktów, plan diety, raporty, profil, dietetyk i panel admina.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right hidden sm:block">
+          <p class="text-xs text-slate-400 font-bold uppercase">Zalogowany użytkownik</p>
+          <p id="headerUser" class="font-black text-slate-800">Klaudia Nowak</p>
+        </div>
+        <button onclick="resetDemo()" class="px-4 py-3 rounded-2xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition">Reset demo</button>
+        <button onclick="logoutUser()" class="px-4 py-3 rounded-2xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">Wyloguj</button>
+      </div>
+    </header>
+
+    <nav class="bg-white rounded-[28px] shadow-lg border border-gray-100 p-2 mb-6 overflow-x-auto hide-scroll">
+      <div class="flex gap-2 min-w-max" id="navTabs">
+        <button data-page="dashboard" class="nav-btn tab-active px-4 py-3 rounded-2xl font-black text-sm">🏠 Pulpit</button>
+        <button data-page="addMeal" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">🥗 Dodaj posiłek</button>
+        <button data-page="diary" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">📒 Dziennik</button>
+        <button data-page="products" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">🛒 Produkty</button>
+        <button data-page="plan" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">📋 Plan diety</button>
+        <button data-page="reports" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">📊 Raporty</button>
+        <button data-page="profile" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">👤 Profil</button>
+        <button data-page="dietitian" class="nav-btn px-4 py-3 rounded-2xl font-black text-sm text-slate-500 hover:bg-gray-50">🩺 Dietetyk/Admin</button>
+      </div>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="page active"></section>
+      <section id="addMeal" class="page"></section>
+      <section id="diary" class="page"></section>
+      <section id="products" class="page"></section>
+      <section id="plan" class="page"></section>
+      <section id="reports" class="page"></section>
+      <section id="profile" class="page"></section>
+      <section id="dietitian" class="page"></section>
+    </main>
+  </div>
+
+  <template id="emptyState">
+    <div class="bg-white rounded-[32px] p-8 text-center border border-gray-100 shadow-lg">
+      <div class="text-5xl mb-3">🍽️</div>
+      <p class="font-black text-slate-800">Brak danych</p>
+      <p class="text-slate-500 text-sm mt-1">Dodaj pierwszy posiłek, aby zobaczyć analizę.</p>
+    </div>
+  </template>
+
+  <script>
+    const todayISO = () => new Date().toISOString().slice(0, 10);
+
+    const DEFAULT_STATE = {
+      auth: {
+        currentUserEmail: null,
+        users: [
+          { id: crypto.randomUUID(), name: 'Klaudia Nowak', email: 'klaudia.nowak@student.wat.edu.pl', password: 'diet123', role: 'Użytkownik' }
+        ]
+      },
+      user: {
+        name: 'Klaudia Nowak', email: 'klaudia.nowak@student.wat.edu.pl', age: 23,
+        goal: 'Redukcja masy ciała', activity: 'Umiarkowana', caloriesTarget: 2000,
+        notes: 'Preferencje: szybkie posiłki, proste produkty, dużo białka.'
+      },
+      selectedCategory: 'ŚNIADANIE',
+      products: [
+        { id: crypto.randomUUID(), name: 'Płatki owsiane', kcal: 389, protein: 17, carbs: 66, fat: 7, unit: '100 g', category: 'Zbożowe' },
+        { id: crypto.randomUUID(), name: 'Jogurt naturalny', kcal: 60, protein: 4, carbs: 5, fat: 3, unit: '100 g', category: 'Nabiał' },
+        { id: crypto.randomUUID(), name: 'Banan', kcal: 89, protein: 1, carbs: 23, fat: 0.3, unit: '100 g', category: 'Owoce' },
+        { id: crypto.randomUUID(), name: 'Pierś z kurczaka', kcal: 165, protein: 31, carbs: 0, fat: 3.6, unit: '100 g', category: 'Mięso' },
+        { id: crypto.randomUUID(), name: 'Ryż biały', kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, unit: '100 g', category: 'Zbożowe' },
+        { id: crypto.randomUUID(), name: 'Jajko', kcal: 155, protein: 13, carbs: 1.1, fat: 11, unit: '100 g', category: 'Nabiał' },
+        { id: crypto.randomUUID(), name: 'Awokado', kcal: 160, protein: 2, carbs: 9, fat: 15, unit: '100 g', category: 'Warzywa/Owoce' }
+      ],
+      meals: [
+        { id: crypto.randomUUID(), date: todayISO(), type: 'ŚNIADANIE', product: 'Płatki owsiane', grams: 70, kcal: 272, protein: 11.9, carbs: 46.2, fat: 4.9 },
+        { id: crypto.randomUUID(), date: todayISO(), type: 'OBIAD', product: 'Pierś z kurczaka', grams: 150, kcal: 248, protein: 46.5, carbs: 0, fat: 5.4 }
+      ],
+      plans: [],
+      reports: [],
+      dietitianNotes: []
+    };
+
+    let state = normalizeState(loadState());
+
+    function loadState() {
+      const saved = localStorage.getItem('dietanalyst-app');
+      if (!saved) return structuredClone(DEFAULT_STATE);
+      try { return JSON.parse(saved); } catch { return structuredClone(DEFAULT_STATE); }
+    }
+
+    function normalizeState(loaded) {
+      const normalized = { ...structuredClone(DEFAULT_STATE), ...loaded };
+      normalized.auth = loaded.auth || structuredClone(DEFAULT_STATE.auth);
+      normalized.auth.users = Array.isArray(normalized.auth.users) && normalized.auth.users.length
+        ? normalized.auth.users
+        : structuredClone(DEFAULT_STATE.auth.users);
+      normalized.products = loaded.products || structuredClone(DEFAULT_STATE.products);
+      normalized.meals = loaded.meals || structuredClone(DEFAULT_STATE.meals);
+      normalized.plans = loaded.plans || [];
+      normalized.reports = loaded.reports || [];
+      normalized.dietitianNotes = loaded.dietitianNotes || [];
+      normalized.user = loaded.user || structuredClone(DEFAULT_STATE.user);
+      return normalized;
+    }
+
+    function isLoggedIn() {
+      return Boolean(state.auth && state.auth.currentUserEmail);
+    }
+
+    function currentAuthUser() {
+      return state.auth.users.find(u => u.email === state.auth.currentUserEmail) || null;
+    }
+
+    function syncCurrentUserIntoState() {
+      const user = currentAuthUser();
+      if (!user) return;
+      state.user.name = user.name;
+      state.user.email = user.email;
+      state.user.role = user.role || 'Użytkownik';
+    }
+
+    function renderAuth(mode = 'login') {
+      const isRegister = mode === 'register';
+      document.getElementById('authShell').innerHTML = `
+        <div class="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-8 border border-gray-100">
+          <div class="text-center mb-8">
+            <p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">DietAnalyst</p>
+            <h1 class="text-3xl font-black text-slate-800 mt-2">${isRegister ? 'Rejestracja użytkownika' : 'Panel logowania'}</h1>
+            <p class="text-sm text-slate-500 mt-2">${isRegister ? 'Utwórz konto i rozpocznij prowadzenie dziennika posiłków.' : 'Zaloguj się, aby przejść do aplikacji DietAnalyst.'}</p>
+          </div>
+
+          <div class="flex bg-gray-100 p-1 rounded-2xl mb-8">
+            <button onclick="renderAuth('login')" class="flex-1 py-3 ${!isRegister ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'} font-bold rounded-xl">LOGOWANIE</button>
+            <button onclick="renderAuth('register')" class="flex-1 py-3 ${isRegister ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'} font-bold rounded-xl">REJESTRACJA</button>
+          </div>
+
+          ${isRegister ? `
+            <div class="space-y-4">
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Imię i nazwisko</label><input id="regName" type="text" placeholder="Klaudia Nowak" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"></div>
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">E-mail</label><input id="regEmail" type="email" placeholder="email@student.wat.edu.pl" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"></div>
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Hasło</label><input id="regPassword" type="password" placeholder="minimum 4 znaki" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"></div>
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Rola</label><select id="regRole" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"><option>Użytkownik</option><option>Dietetyk</option><option>Administrator</option></select></div>
+              <button onclick="registerUser()" class="w-full bg-[#22c55e] text-white font-black py-4 rounded-2xl hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-200">UTWÓRZ KONTO +</button>
+            </div>` : `
+            <div class="space-y-5">
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">E-mail</label><input id="loginEmail" type="email" value="${state.auth.users[0]?.email || ''}" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"></div>
+              <div><label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Hasło</label><input id="loginPassword" type="password" value="diet123" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition"></div>
+              <button onclick="loginUser()" class="w-full bg-[#22c55e] text-white font-black py-4 rounded-2xl hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-200">ZALOGUJ SIĘ</button>
+              <p class="text-xs text-slate-400 text-center">Demo: ${state.auth.users[0]?.email || 'konto demo'} / diet123</p>
+            </div>`}
+        </div>`;
+    }
+
+    function loginUser() {
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+      const user = state.auth.users.find(u => u.email.toLowerCase() === email && u.password === password);
+      if (!user) return alert('Nieprawidłowy e-mail lub hasło.');
+      state.auth.currentUserEmail = user.email;
+      syncCurrentUserIntoState();
+      saveState();
+      initApp();
+    }
+
+    function registerUser() {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim().toLowerCase();
+      const password = document.getElementById('regPassword').value;
+      const role = document.getElementById('regRole').value;
+      if (!name || !email || password.length < 4) return alert('Uzupełnij imię, e-mail oraz hasło minimum 4 znaki.');
+      if (state.auth.users.some(u => u.email.toLowerCase() === email)) return alert('Użytkownik o takim adresie już istnieje.');
+      state.auth.users.push({ id: crypto.randomUUID(), name, email, password, role });
+      state.auth.currentUserEmail = email;
+      state.user = { ...state.user, name, email, role };
+      saveState();
+      initApp();
+    }
+
+    function logoutUser() {
+      state.auth.currentUserEmail = null;
+      saveState();
+      document.getElementById('appShell').classList.add('hidden');
+      document.getElementById('authShell').classList.remove('hidden');
+      renderAuth('login');
+    }
+
+    function initApp() {
+      if (!isLoggedIn()) {
+        document.getElementById('appShell').classList.add('hidden');
+        document.getElementById('authShell').classList.remove('hidden');
+        renderAuth('login');
+        return;
+      }
+      syncCurrentUserIntoState();
+      document.getElementById('authShell').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      renderAll();
+    }
+
+    function saveState() {
+      localStorage.setItem('dietanalyst-app', JSON.stringify(state));
+      const header = document.getElementById('headerUser');
+      if (header) header.textContent = `${state.user.name || 'Użytkownik'}${state.user.role ? ' • ' + state.user.role : ''}`;
+    }
+
+    function resetDemo() {
+      if (!confirm('Czy na pewno zresetować dane demo?')) return;
+      const auth = structuredClone(state.auth || DEFAULT_STATE.auth);
+      state = structuredClone(DEFAULT_STATE);
+      state.auth = auth;
+      if (!state.auth.currentUserEmail) state.auth.currentUserEmail = auth.users[0]?.email || null;
+      syncCurrentUserIntoState();
+      saveState();
+      renderAll();
+    }
+
+    function setPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(page).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('tab-active', btn.dataset.page === page);
+        btn.classList.toggle('text-slate-500', btn.dataset.page !== page);
+      });
+      renderAll();
+    }
+
+    document.getElementById('navTabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('.nav-btn');
+      if (btn) setPage(btn.dataset.page);
+    });
+
+    const sumToday = () => state.meals.filter(m => m.date === todayISO()).reduce((acc, m) => {
+      acc.kcal += Number(m.kcal || 0); acc.protein += Number(m.protein || 0); acc.carbs += Number(m.carbs || 0); acc.fat += Number(m.fat || 0); return acc;
+    }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+    function macroFromProduct(productName, grams) {
+      const product = state.products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+      const base = product || { kcal: 100, protein: 3, carbs: 12, fat: 2, name: productName };
+      const factor = Number(grams) / 100;
+      return {
+        kcal: Math.round(base.kcal * factor),
+        protein: +(base.protein * factor).toFixed(1),
+        carbs: +(base.carbs * factor).toFixed(1),
+        fat: +(base.fat * factor).toFixed(1)
+      };
+    }
+
+    function card(title, value, caption, emoji, color = 'green') {
+      return `<div class="bg-white rounded-[28px] p-6 shadow-lg border border-gray-100">
+        <div class="flex justify-between items-start gap-4"><div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">${title}</p><p class="text-3xl font-black text-slate-800 mt-2">${value}</p><p class="text-sm text-slate-500 mt-1">${caption}</p></div><div class="text-4xl">${emoji}</div></div>
+      </div>`;
+    }
+
+    function renderDashboard() {
+      const s = sumToday();
+      const p = Math.min(100, Math.round((s.kcal / state.user.caloriesTarget) * 100));
+      const recentMeals = state.meals.slice(-4).reverse().map(m => `
+        <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
+          <div><p class="font-bold text-slate-800">${m.product}</p><p class="text-xs text-slate-400">${m.type} • ${m.grams} g • ${m.date}</p></div><p class="font-black text-green-600">${m.kcal} kcal</p>
+        </div>`).join('') || '<p class="text-slate-500 text-sm">Brak posiłków.</p>';
+
+      document.getElementById('dashboard').innerHTML = `
+        <div class="grid lg:grid-cols-[1.2fr_.8fr] gap-6">
+          <div class="space-y-6">
+            <div class="grid md:grid-cols-4 gap-4">
+              ${card('Kalorie dzisiaj', `${s.kcal}`, `cel ${state.user.caloriesTarget} kcal`, '🔥')}
+              ${card('Białko', `${s.protein.toFixed(1)} g`, 'suma dzienna', '💪')}
+              ${card('Węglowodany', `${s.carbs.toFixed(1)} g`, 'suma dzienna', '🌾')}
+              ${card('Tłuszcze', `${s.fat.toFixed(1)} g`, 'suma dzienna', '🥑')}
+            </div>
+            <div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Analiza nawyków</p>
+                  <h2 class="text-2xl font-black text-slate-800 mt-1">Dzisiejszy bilans żywieniowy</h2>
+                  <p class="text-slate-500 mt-2">System oblicza kalorie i makroskładniki na podstawie dziennika posiłków oraz bazy produktów.</p>
+                </div>
+                <div class="progress-ring w-32 h-32 rounded-full flex items-center justify-center" style="--p:${p}%">
+                  <div class="w-24 h-24 bg-white rounded-full flex flex-col items-center justify-center shadow-inner"><b class="text-2xl text-slate-800">${p}%</b><span class="text-xs text-slate-400">celu</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100">
+            <h3 class="font-black text-xl text-slate-800 mb-4">Ostatnie posiłki</h3>
+            ${recentMeals}
+            <button onclick="setPage('addMeal')" class="mt-6 w-full bg-[#22c55e] text-white font-black py-4 rounded-2xl hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-200">DODAJ POSIŁEK +</button>
+          </aside>
+        </div>`;
+    }
+
+    function renderAddMeal() {
+      const options = state.products.map(p => `<option value="${p.name}"></option>`).join('');
+      document.getElementById('addMeal').innerHTML = `
+        <div class="bg-white w-full max-w-md mx-auto phone-card shadow-2xl p-8 border border-gray-100">
+          <h1 class="text-2xl font-black text-slate-800 text-center mb-8 flex items-center justify-center gap-2">🥗 DODAJ POSIŁEK</h1>
+          <div class="flex bg-gray-100 p-1 rounded-2xl mb-8" id="mealTypeTabs">
+            ${['ŚNIADANIE','OBIAD','KOLACJA'].map(t => `<button onclick="state.selectedCategory='${t}'; saveState(); renderAddMeal();" class="flex-1 py-3 ${state.selectedCategory===t?'bg-white text-blue-600 shadow-sm':'text-gray-400 hover:text-gray-600'} font-bold rounded-xl">${t}</button>`).join('')}
+          </div>
+          <div class="space-y-6">
+            <div>
+              <label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Produkt</label>
+              <input id="mealProduct" list="productList" type="text" placeholder="Np. Płatki owsiane..." class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition">
+              <datalist id="productList">${options}</datalist>
+            </div>
+            <div>
+              <label class="block text-gray-400 text-xs font-extrabold tracking-wider uppercase mb-2 ml-1">Ilość (gramy)</label>
+              <input id="mealGrams" type="number" placeholder="100" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-400 outline-none transition">
+            </div>
+            <button onclick="addMeal()" class="w-full bg-[#22c55e] text-white font-black py-4 rounded-2xl hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-200">DODAJ DO DZIENNIKA +</button>
+          </div>
+        </div>`;
+    }
+
+    function addMeal() {
+      const product = document.getElementById('mealProduct').value.trim();
+      const grams = Number(document.getElementById('mealGrams').value || 0);
+      if (!product || grams <= 0) { alert('Uzupełnij produkt i ilość.'); return; }
+      const macro = macroFromProduct(product, grams);
+      state.meals.push({ id: crypto.randomUUID(), date: todayISO(), type: state.selectedCategory, product, grams, ...macro });
+      saveState();
+      alert('Posiłek dodany do dziennika.');
+      renderAll();
+      setPage('diary');
+    }
+
+    function renderDiary() {
+      const rows = state.meals.slice().reverse().map(m => `<tr class="border-b border-gray-100">
+        <td class="py-3 font-bold text-slate-800">${m.date}</td><td>${m.type}</td><td>${m.product}</td><td>${m.grams} g</td><td class="font-black text-green-600">${m.kcal}</td>
+        <td><button onclick="deleteMeal('${m.id}')" class="text-red-500 font-bold hover:underline">usuń</button></td></tr>`).join('');
+      document.getElementById('diary').innerHTML = `<div class="bg-white rounded-[32px] shadow-lg border border-gray-100 p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5"><div><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Dziennik posiłków</p><h2 class="text-2xl font-black text-slate-800">Historia żywieniowa</h2></div><button onclick="setPage('addMeal')" class="bg-[#22c55e] text-white font-black px-5 py-3 rounded-2xl">Dodaj posiłek</button></div>
+        <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="text-xs uppercase text-slate-400"><tr><th class="py-3">Data</th><th>Typ</th><th>Produkt</th><th>Ilość</th><th>Kcal</th><th>Akcja</th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="py-8 text-center text-slate-500">Brak posiłków.</td></tr>'}</tbody></table></div>
+      </div>`;
+    }
+
+    function deleteMeal(id) { state.meals = state.meals.filter(m => m.id !== id); saveState(); renderDiary(); }
+
+    function renderProducts() {
+      const rows = state.products.map(p => `<tr class="border-b border-gray-100"><td class="py-3 font-bold">${p.name}</td><td>${p.category}</td><td>${p.kcal}</td><td>${p.protein}</td><td>${p.carbs}</td><td>${p.fat}</td></tr>`).join('');
+      document.getElementById('products').innerHTML = `<div class="grid lg:grid-cols-[.8fr_1.2fr] gap-6">
+        <div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Baza produktów</p><h2 class="text-2xl font-black text-slate-800 mb-5">Dodaj produkt</h2>
+          <div class="space-y-3"><input id="pName" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" placeholder="Nazwa produktu"><input id="pCat" class="w-full p-4 bg-gray-50 rounded-2xl outline-none" placeholder="Kategoria"><div class="grid grid-cols-2 gap-3"><input id="pKcal" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" placeholder="kcal/100g"><input id="pProtein" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" placeholder="białko"><input id="pCarbs" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" placeholder="węglowodany"><input id="pFat" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" placeholder="tłuszcz"></div><button onclick="addProduct()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black">Dodaj do bazy</button></div>
+        </div>
+        <div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><h2 class="text-2xl font-black text-slate-800 mb-4">Produkty i wartości odżywcze</h2><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-xs uppercase text-slate-400 text-left"><tr><th class="py-3">Produkt</th><th>Kategoria</th><th>Kcal</th><th>B</th><th>W</th><th>T</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+      </div>`;
+    }
+
+    function addProduct() {
+      const name = document.getElementById('pName').value.trim();
+      if (!name) return alert('Podaj nazwę produktu.');
+      state.products.push({ id: crypto.randomUUID(), name, category: document.getElementById('pCat').value || 'Inne', kcal: Number(pKcal.value||0), protein: Number(pProtein.value||0), carbs: Number(pCarbs.value||0), fat: Number(pFat.value||0), unit: '100 g' });
+      saveState(); renderProducts();
+    }
+
+    function renderPlan() {
+      const latest = state.plans.at(-1);
+      const planHtml = latest ? `<div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100 mt-6"><div class="flex justify-between gap-3 flex-wrap"><div><p class="text-xs font-black text-green-600 uppercase tracking-widest">Aktualny plan</p><h3 class="text-2xl font-black text-slate-800">${latest.name}</h3><p class="text-sm text-slate-500">Status: <b>${latest.status}</b> • ${latest.createdAt}</p></div><div class="flex gap-2"><button onclick="sendPlan()" class="px-4 py-3 bg-blue-600 text-white rounded-2xl font-bold">Wyślij do dietetyka</button><button onclick="archivePlan()" class="px-4 py-3 bg-slate-100 rounded-2xl font-bold">Archiwizuj</button></div></div><div class="grid md:grid-cols-3 gap-4 mt-5">${latest.days.map(d => `<div class="rounded-3xl bg-gray-50 p-5"><p class="font-black text-slate-800 mb-2">${d.day}</p><ul class="text-sm text-slate-600 space-y-2">${d.meals.map(x => `<li>• ${x}</li>`).join('')}</ul></div>`).join('')}</div></div>` : '';
+      document.getElementById('plan').innerHTML = `<div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Plan diety</p><h2 class="text-2xl font-black text-slate-800">Generowanie i zatwierdzanie planu</h2><p class="text-slate-500 mt-2">Plan tworzony jest na podstawie profilu, celu oraz danych z dziennika posiłków.</p><button onclick="generatePlan()" class="mt-5 bg-[#22c55e] text-white font-black px-6 py-4 rounded-2xl shadow-lg shadow-green-200">Wygeneruj plan diety</button></div>${planHtml}`;
+    }
+
+    function generatePlan() {
+      const proteinProducts = state.products.filter(p => p.protein >= 10).map(p => p.name);
+      const carbProducts = state.products.filter(p => p.carbs >= 15).map(p => p.name);
+      const days = ['Dzień 1', 'Dzień 2', 'Dzień 3'].map((d, i) => ({ day: d, meals: [
+        `Śniadanie: ${carbProducts[i % Math.max(1, carbProducts.length)] || 'Płatki owsiane'} + jogurt`,
+        `Obiad: ${proteinProducts[i % Math.max(1, proteinProducts.length)] || 'Pierś z kurczaka'} + ryż + warzywa`,
+        `Kolacja: jajka / jogurt naturalny + owoc`
+      ]}));
+      state.plans.push({ id: crypto.randomUUID(), name: `Plan ${state.user.goal}`, status: 'Wygenerowany', createdAt: todayISO(), days });
+      saveState(); renderPlan();
+    }
+
+    function sendPlan() { const p = state.plans.at(-1); if (!p) return; p.status = 'DoWeryfikacji'; state.dietitianNotes.push({ date: todayISO(), text: 'Plan przekazany do weryfikacji dietetyka.' }); saveState(); renderPlan(); }
+    function archivePlan() { const p = state.plans.at(-1); if (!p) return; p.status = 'Zarchiwizowany'; saveState(); renderPlan(); }
+
+    function renderReports() {
+      const s = sumToday();
+      const report = `Raport DietAnalyst\nData: ${todayISO()}\nKalorie: ${s.kcal}/${state.user.caloriesTarget}\nBiałko: ${s.protein.toFixed(1)} g\nWęglowodany: ${s.carbs.toFixed(1)} g\nTłuszcze: ${s.fat.toFixed(1)} g\nLiczba posiłków: ${state.meals.length}`;
+      document.getElementById('reports').innerHTML = `<div class="grid lg:grid-cols-2 gap-6"><div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Raporty</p><h2 class="text-2xl font-black text-slate-800 mb-3">Analiza postępów</h2><textarea id="reportText" class="w-full h-72 p-4 bg-gray-50 rounded-2xl outline-none text-sm">${report}</textarea><div class="flex gap-3 mt-4"><button onclick="copyReport()" class="bg-blue-600 text-white px-5 py-3 rounded-2xl font-bold">Kopiuj raport</button><button onclick="window.print()" class="bg-slate-100 px-5 py-3 rounded-2xl font-bold">Drukuj/PDF</button></div></div><div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><h3 class="text-xl font-black text-slate-800 mb-4">Podsumowanie</h3>${card('Liczba posiłków', state.meals.length, 'w dzienniku', '📒')}${card('Liczba produktów', state.products.length, 'w bazie', '🛒')}${card('Status planu', state.plans.at(-1)?.status || 'brak', 'ostatni plan', '📋')}</div></div>`;
+    }
+    function copyReport() { navigator.clipboard.writeText(document.getElementById('reportText').value); alert('Raport skopiowany.'); }
+
+    function renderProfile() {
+      document.getElementById('profile').innerHTML = `<div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100 max-w-3xl mx-auto"><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Profil użytkownika</p><h2 class="text-2xl font-black text-slate-800 mb-5">Personalizacja planu</h2><div class="grid md:grid-cols-2 gap-4"><input id="uName" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.name}"><input id="uEmail" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.email}"><input id="uAge" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.age}"><input id="uTarget" type="number" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.caloriesTarget}"><input id="uGoal" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.goal}"><input id="uActivity" class="p-4 bg-gray-50 rounded-2xl outline-none" value="${state.user.activity}"></div><textarea id="uNotes" class="mt-4 w-full p-4 bg-gray-50 rounded-2xl outline-none h-28">${state.user.notes}</textarea><button onclick="saveProfile()" class="mt-4 w-full bg-[#22c55e] text-white py-4 rounded-2xl font-black">Zapisz profil</button></div>`;
+    }
+    function saveProfile() {
+      const oldEmail = state.auth.currentUserEmail;
+      state.user = { name: uName.value, email: uEmail.value, age: Number(uAge.value), caloriesTarget: Number(uTarget.value), goal: uGoal.value, activity: uActivity.value, notes: uNotes.value, role: state.user.role || 'Użytkownik' };
+      const authUser = state.auth.users.find(u => u.email === oldEmail);
+      if (authUser) {
+        authUser.name = state.user.name;
+        authUser.email = state.user.email;
+        authUser.role = state.user.role;
+        state.auth.currentUserEmail = state.user.email;
+      }
+      saveState(); renderProfile(); alert('Profil zapisany.');
+    }
+
+    function renderDietitian() {
+      const latest = state.plans.at(-1);
+      document.getElementById('dietitian').innerHTML = `<div class="grid lg:grid-cols-2 gap-6"><div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><p class="text-xs font-black text-green-600 tracking-[0.28em] uppercase">Pulpit dietetyka</p><h2 class="text-2xl font-black text-slate-800 mb-4">Weryfikacja planu diety</h2><p class="text-slate-500 mb-4">Aktualny status: <b>${latest?.status || 'brak planu'}</b></p><textarea id="dietNote" class="w-full h-28 p-4 bg-gray-50 rounded-2xl outline-none" placeholder="Notatka dietetyka..."></textarea><div class="flex gap-3 mt-4"><button onclick="approvePlan()" class="bg-[#22c55e] text-white px-5 py-3 rounded-2xl font-black">Zatwierdź</button><button onclick="rejectPlan()" class="bg-red-500 text-white px-5 py-3 rounded-2xl font-black">Odrzuć</button></div></div><div class="bg-white rounded-[32px] p-6 shadow-lg border border-gray-100"><p class="text-xs font-black text-blue-600 tracking-[0.28em] uppercase">Konsola admina</p><h2 class="text-2xl font-black text-slate-800 mb-4">Monitoring systemu</h2><div class="space-y-3"><p class="p-4 bg-gray-50 rounded-2xl">Użytkownik: <b>${state.user.name}</b></p><p class="p-4 bg-gray-50 rounded-2xl">Posiłki w dzienniku: <b>${state.meals.length}</b></p><p class="p-4 bg-gray-50 rounded-2xl">Produkty w bazie: <b>${state.products.length}</b></p><p class="p-4 bg-gray-50 rounded-2xl">Plany diety: <b>${state.plans.length}</b></p></div></div></div>`;
+    }
+    function approvePlan() { const p = state.plans.at(-1); if (!p) return alert('Brak planu.'); p.status = 'Zatwierdzony'; state.dietitianNotes.push({ date: todayISO(), text: dietNote.value || 'Plan zatwierdzony.' }); saveState(); renderDietitian(); }
+    function rejectPlan() { const p = state.plans.at(-1); if (!p) return alert('Brak planu.'); p.status = 'Odrzucony'; state.dietitianNotes.push({ date: todayISO(), text: dietNote.value || 'Plan wymaga poprawek.' }); saveState(); renderDietitian(); }
+
+    function renderAll() {
+      saveState();
+      renderDashboard(); renderAddMeal(); renderDiary(); renderProducts(); renderPlan(); renderReports(); renderProfile(); renderDietitian();
+    }
+
+    initApp();
+  </script>
+</body>
+</html>

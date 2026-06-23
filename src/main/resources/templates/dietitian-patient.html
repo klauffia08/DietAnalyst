@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Profil podopiecznego')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('dietitian')}"></aside>
+<main class="content">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="topbar"><div><h1 th:text="'Profil podopiecznego: '+${patient.name}"></h1><p class="muted" th:text="${patient.email}"></p></div><a class="btn btn-light" th:href="@{/dietitian/patients}">Wróć do listy</a></div>
+
+  <div class="grid grid-4">
+    <div class="card metric"><span>Realizacja celu dziś</span><b th:text="${summary.progress()}+'%'"></b><small th:text="${summary.kcal}+'/'+${summary.target}+' kcal'"></small></div>
+    <div class="card metric"><span>Białko</span><b th:text="${summary.protein}+' g'"></b><small>dzisiaj</small></div>
+    <div class="card metric"><span>Węglowodany</span><b th:text="${summary.carbs}+' g'"></b><small>dzisiaj</small></div>
+    <div class="card metric"><span>Tłuszcze</span><b th:text="${summary.fat}+' g'"></b><small>dzisiaj</small></div>
+  </div>
+
+  <div class="grid grid-2 section-gap">
+    <section class="card"><h2>Dane profilu</h2><div class="stat-list">
+      <div><span>Wiek</span><b th:text="${patient.age != null ? patient.age : 'brak'}"></b></div>
+      <div><span>Cel żywieniowy</span><b th:text="${patient.goal}"></b></div>
+      <div><span>Aktywność</span><b th:text="${patient.activity}"></b></div>
+      <div><span>Cel kaloryczny</span><b th:text="${patient.caloriesTarget}+' kcal'"></b></div>
+    </div><div class="note-box"><b>Preferencje i uwagi</b><p th:text="${patient.notes != null and !patient.notes.isBlank() ? patient.notes : 'Brak dodatkowych uwag.'}"></p></div></section>
+
+    <section class="card"><h2>Ostatnie posiłki</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kcal</th></tr></thead><tbody>
+      <tr th:each="m,stat:${meals}" th:if="${stat.index < 12}"><td th:text="${m.date}"></td><td th:text="${m.product.name}"></td><td th:text="${m.grams}+' g'"></td><td th:text="${m.kcal}"></td></tr>
+      <tr th:if="${#lists.isEmpty(meals)}"><td colspan="4" class="muted">Brak wpisów w dzienniku.</td></tr>
+    </tbody></table></div></section>
+  </div>
+
+  <section class="card section-gap"><div class="section-title"><div><h2>Plany diety i decyzje</h2><p class="muted">Zatwierdzaj wyłącznie plany przesłane do weryfikacji.</p></div></div>
+    <div th:each="p:${plans}" class="plan-review">
+      <div class="section-title"><div><b th:text="${p.name}"></b><p class="muted" th:text="${#temporals.format(p.createdAt,'dd.MM.yyyy HH:mm')}"></p></div><span class="badge" th:classappend="${p.status.name()=='APPROVED'}?'green':(${p.status.name()=='REJECTED'}?'red':'')" th:text="${p.status.label}"></span></div>
+      <div class="pre" th:text="${p.content}"></div>
+      <div class="alert" th:if="${p.dietitianNote != null and !p.dietitianNote.isBlank()}" th:text="'Komentarz dietetyka: '+${p.dietitianNote}"></div>
+      <form th:if="${p.status.name()=='SUBMITTED'}" th:action="@{'/dietitian/plans/'+${p.id}+'/review'}" method="post">
+        <div class="form-group"><label>Komentarz</label><textarea name="note" rows="4"></textarea></div>
+        <button class="btn btn-green" name="approve" value="true">Zatwierdź</button>
+        <button class="btn btn-red" name="approve" value="false">Odrzuć</button>
+      </form>
+    </div>
+    <p class="muted" th:if="${#lists.isEmpty(plans)}">Podopieczny nie ma jeszcze planów.</p>
+  </section>
+</main></div></body></html>

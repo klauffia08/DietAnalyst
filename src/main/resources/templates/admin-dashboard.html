@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Pulpit administratora')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('admin-dashboard')}"></aside>
+<main class="content">
+  <div class="topbar">
+    <div><h1>Pulpit administratora</h1><p class="muted">Zarządzanie kontami, rolami, bezpieczeństwem i wspólną bazą produktów.</p></div>
+    <a class="btn btn-blue" th:href="@{/admin/users}">Zarządzaj użytkownikami</a>
+  </div>
+  <div class="grid grid-4">
+    <div class="card metric"><span>Wszystkie konta</span><b th:text="${stats.allAccounts}">0</b><small th:text="${stats.activeAccounts} + ' aktywnych'"></small></div>
+    <div class="card metric"><span>Użytkownicy</span><b th:text="${stats.users}">0</b><small>konta podopiecznych</small></div>
+    <div class="card metric"><span>Dietetycy</span><b th:text="${stats.dietitians}">0</b><small>konta specjalistów</small></div>
+    <div class="card metric"><span>Produkty</span><b th:text="${stats.products}">0</b><small>w bazie wartości odżywczych</small></div>
+  </div>
+  <div class="grid grid-2 section-gap">
+    <section class="card">
+      <div class="section-title"><div><h2>Stan systemu</h2><p class="muted">Zbiorcze dane techniczne i operacyjne.</p></div></div>
+      <div class="stat-list">
+        <div><span>Administratorzy</span><b th:text="${stats.administrators}"></b></div>
+        <div><span>Wpisy posiłków</span><b th:text="${stats.meals}"></b></div>
+        <div><span>Plany diety</span><b th:text="${stats.plans}"></b></div>
+        <div><span>Plany oczekujące na dietetyka</span><b th:text="${stats.pendingPlans}"></b></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="section-title"><div><h2>Najnowsze konta</h2><p class="muted">Ostatnie rekordy w bazie użytkowników.</p></div></div>
+      <div class="compact-list" th:each="u:${newestUsers}">
+        <div><b th:text="${u.name}"></b><span th:text="${u.email}"></span></div>
+        <span class="badge" th:text="${u.role.label}"></span>
+      </div>
+    </section>
+  </div>
+  <section class="card section-gap">
+    <div class="section-title"><div><h2>Ostatnie zdarzenia</h2><p class="muted">Skrócony podgląd dziennika audytowego.</p></div><a class="btn btn-light" th:href="@{/admin/audit}">Pełny dziennik</a></div>
+    <div style="overflow:auto"><table><thead><tr><th>Czas</th><th>Użytkownik</th><th>Akcja</th><th>Szczegóły</th></tr></thead><tbody>
+      <tr th:each="l:${logs}"><td th:text="${#temporals.format(l.eventTime,'dd.MM.yyyy HH:mm')}"></td><td th:text="${l.actorEmail}"></td><td th:text="${l.action}"></td><td th:text="${l.details}"></td></tr>
+      <tr th:if="${#lists.isEmpty(logs)}"><td colspan="4" class="muted">Brak zdarzeń.</td></tr>
+    </tbody></table></div>
+  </section>
+</main></div></body></html>

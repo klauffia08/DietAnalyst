@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Użytkownicy i role')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('admin')}"></aside>
+<main class="content">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="topbar"><div><h1>Użytkownicy i role</h1><p class="muted">Administrator zarządza kontami, rolami i przypisaniem użytkowników do dietetyków.</p></div></div>
+  <section class="card"><div style="overflow:auto"><table><thead><tr><th>Konto</th><th>Rola</th><th>Status</th><th>Przypisany dietetyk</th><th>Operacje</th></tr></thead><tbody>
+    <tr th:each="u:${users}">
+      <td><b th:text="${u.name}"></b><br><span class="muted" th:text="${u.email}"></span></td>
+      <td><form th:action="@{'/admin/users/'+${u.id}+'/role'}" method="post"><select name="role" onchange="this.form.submit()"><option th:each="r:${roles}" th:value="${r}" th:selected="${r==u.role}" th:text="${r.label}"></option></select></form></td>
+      <td><span class="badge" th:classappend="${u.active}?'green':'red'" th:text="${u.active?'Aktywne':'Nieaktywne'}"></span></td>
+      <td><form th:if="${u.role.name()=='USER'}" th:action="@{'/admin/users/'+${u.id}+'/dietitian'}" method="post"><select name="dietitianId" onchange="this.form.submit()"><option value="">Brak</option><option th:each="d:${dietitians}" th:value="${d.id}" th:selected="${u.assignedDietitian != null and u.assignedDietitian.id == d.id}" th:text="${d.name}"></option></select></form><span th:unless="${u.role.name()=='USER'}">—</span></td>
+      <td><form th:action="@{'/admin/users/'+${u.id}+'/toggle'}" method="post"><button class="btn btn-light" th:text="${u.active?'Dezaktywuj':'Aktywuj'}"></button></form></td>
+    </tr>
+  </tbody></table></div></section>
+</main></div></body></html>

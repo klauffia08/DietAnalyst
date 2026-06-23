@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Plany do weryfikacji')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('dietitian-plans')}"></aside>
+<main class="content">
+  <div class="topbar"><div><h1>Plany do weryfikacji</h1><p class="muted">Plany przesłane przez przypisanych podopiecznych.</p></div></div>
+  <section class="card" th:each="p:${plans}" style="margin-bottom:18px">
+    <div class="section-title"><div><h2 th:text="${p.user.name} + ' – ' + ${p.name}"></h2><p class="muted" th:text="${p.user.email} + ' • ' + ${#temporals.format(p.createdAt,'dd.MM.yyyy HH:mm')}"></p></div><span class="badge" th:text="${p.status.label}"></span></div>
+    <div class="pre" th:text="${p.content}"></div>
+    <form th:action="@{'/dietitian/plans/'+${p.id}+'/review'}" method="post">
+      <div class="form-group"><label>Komentarz dietetyka</label><textarea name="note" rows="4" placeholder="Uzasadnij zatwierdzenie albo wskaż poprawki..."></textarea></div>
+      <button class="btn btn-green" name="approve" value="true">Zatwierdź plan</button>
+      <button class="btn btn-red" name="approve" value="false">Odrzuć i przekaż uwagi</button>
+    </form>
+  </section>
+  <section class="card" th:if="${#lists.isEmpty(plans)}"><p class="muted">Brak planów oczekujących na weryfikację.</p></section>
+</main></div></body></html>

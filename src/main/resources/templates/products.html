@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Baza produktów')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('products')}"></aside>
+<main class="content">
+  <div th:replace="~{fragments :: flash}"></div>
+  <div class="topbar"><div><h1>Baza produktów</h1><p class="muted" th:text="${currentUser.role.name() == 'USER' ? 'Przeglądaj wartości odżywcze produktów używanych w dzienniku.' : 'Zarządzaj wspólną bazą wartości odżywczych.'}"></p></div></div>
+  <div class="grid" th:classappend="${currentUser.role.name() == 'USER'} ? '' : ' grid-2'">
+    <section class="card" th:if="${currentUser.role.name() == 'DIETITIAN' or currentUser.role.name() == 'ADMIN'}">
+      <h2>Dodaj nowy produkt</h2><p class="muted">Produkty są dostępne wszystkim użytkownikom podczas rejestrowania posiłków.</p>
+      <form th:action="@{/products/add}" th:object="${form}" method="post">
+        <div class="form-row"><div class="form-group"><label>Nazwa</label><input th:field="*{name}" required></div><div class="form-group"><label>Kategoria</label><input th:field="*{category}" required></div></div>
+        <div class="form-row"><div class="form-group"><label>Kcal / 100 g</label><input th:field="*{kcal}" type="number" step="0.1"></div><div class="form-group"><label>Białko</label><input th:field="*{protein}" type="number" step="0.1"></div></div>
+        <div class="form-row"><div class="form-group"><label>Węglowodany</label><input th:field="*{carbs}" type="number" step="0.1"></div><div class="form-group"><label>Tłuszcz</label><input th:field="*{fat}" type="number" step="0.1"></div></div>
+        <button class="btn btn-blue">Dodaj produkt</button>
+      </form>
+    </section>
+
+    <section class="card"><h2>Produkty i wartości odżywcze</h2><div style="overflow:auto"><table><thead><tr><th>Nazwa</th><th>Kategoria</th><th>Kcal</th><th>B</th><th>W</th><th>T</th><th th:if="${currentUser.role.name() != 'USER'}">Operacje</th></tr></thead><tbody>
+      <tr th:each="p:${products}">
+        <td th:text="${p.name}"></td><td th:text="${p.category}"></td><td th:text="${p.kcal}"></td><td th:text="${p.protein}"></td><td th:text="${p.carbs}"></td><td th:text="${p.fat}"></td>
+        <td th:if="${currentUser.role.name() != 'USER'}"><form th:action="@{'/products/'+${p.id}+'/delete'}" method="post" onsubmit="return confirm('Usunąć produkt? Produkt używany w dzienniku nie zostanie usunięty.')"><button class="btn btn-red">Usuń</button></form></td>
+      </tr>
+    </tbody></table></div></section>
+  </div>
+</main></div></body></html>

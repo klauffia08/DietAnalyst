@@ -1,0 +1,7 @@
+<!DOCTYPE html><html lang="pl" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments :: head('Logowanie')}"></head>
+<body><main class="auth"><section class="auth-card"><div class="brand" style="color:#0f172a"><small>System PWST</small>DietAnalyst</div><h1>Logowanie</h1><p class="muted">Zaloguj się do panelu odpowiedniego dla swojej roli.</p>
+<div class="alert error" th:if="${param.error}">Nieprawidłowy login, hasło lub konto jest nieaktywne.</div><div class="alert" th:if="${param.logout}">Wylogowano poprawnie.</div><div class="alert" th:if="${param.registered}">Konto zostało utworzone. Możesz się zalogować.</div>
+<form th:action="@{/login}" method="post"><div class="form-group"><label>E-mail</label><input type="email" name="username" required autofocus></div><div class="form-group"><label>Hasło</label><input type="password" name="password" required></div><button class="btn btn-green" style="width:100%">Zaloguj się</button></form>
+<p style="text-align:center;margin-top:18px">Nie masz konta? <a th:href="@{/register}" style="color:#2563eb;font-weight:800">Zarejestruj się</a></p>
+<div class="card" style="margin-top:20px;padding:15px;font-size:12px"><b>Konta demo</b><br>Administrator: admin@dietanalyst.pl / Admin123!<br>Dietetyk: dietetyk@dietanalyst.pl / Diet123!<br>Użytkownik: user@dietanalyst.pl / User123!</div>
+</section></main></body></html>

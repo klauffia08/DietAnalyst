@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Pulpit dietetyka')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('dietitian-dashboard')}"></aside>
+<main class="content">
+  <div class="topbar">
+    <div><h1>Pulpit dietetyka</h1><p class="muted">Profile, postępy i plany użytkowników przypisanych do Twojej opieki.</p></div>
+    <a class="btn btn-blue" th:href="@{/dietitian/patients}">Wszyscy podopieczni</a>
+  </div>
+  <div class="grid grid-4">
+    <div class="card metric"><span>Podopieczni</span><b th:text="${stats.patientCount}">0</b><small>przypisane konta</small></div>
+    <div class="card metric"><span>Do weryfikacji</span><b th:text="${stats.pendingPlans}">0</b><small>przesłane plany</small></div>
+    <div class="card metric"><span>Zatwierdzone</span><b th:text="${stats.approvedPlans}">0</b><small>zaakceptowane plany</small></div>
+    <div class="card metric"><span>Wpisy z 7 dni</span><b th:text="${stats.mealsLast7Days}">0</b><small>posiłki podopiecznych</small></div>
+  </div>
+
+  <section class="card section-gap">
+    <div class="section-title"><div><h2>Postępy podopiecznych</h2><p class="muted">Bieżąca realizacja celu kalorycznego i aktywność w dzienniku.</p></div></div>
+    <div class="patient-grid">
+      <article class="patient-card" th:each="p:${patients}">
+        <div class="patient-head"><div><h3 th:text="${p.patient.name}"></h3><span th:text="${p.patient.goal}"></span></div><span class="badge" th:text="${p.latestPlanStatus}"></span></div>
+        <div class="progress-track"><div class="progress-bar" th:style="'width:'+${p.today.progress()}+'%' "></div></div>
+        <p class="muted" th:text="${p.today.kcal} + ' / ' + ${p.today.target} + ' kcal dzisiaj (' + ${p.today.progress()} + '%)'"></p>
+        <div class="mini-stats"><span><b th:text="${p.mealsLast7Days}"></b> posiłków / 7 dni</span><span><b th:text="${p.pendingPlans}"></b> planów oczekuje</span></div>
+        <a class="btn btn-blue" th:href="@{'/dietitian/patients/'+${p.patient.id}}">Otwórz profil podopiecznego</a>
+      </article>
+      <p class="muted" th:if="${#lists.isEmpty(patients)}">Brak przypisanych podopiecznych. Administrator może przypisać użytkowników do dietetyka.</p>
+    </div>
+  </section>
+
+  <section class="card section-gap">
+    <div class="section-title"><div><h2>Plany oczekujące na decyzję</h2><p class="muted">Najpilniejsze zadania dietetyka.</p></div><a class="btn btn-light" th:href="@{/dietitian/plans}">Zobacz wszystkie</a></div>
+    <div class="compact-list" th:each="p:${pendingPlans}">
+      <div><b th:text="${p.user.name}"></b><span th:text="${p.name} + ' • ' + ${#temporals.format(p.createdAt,'dd.MM.yyyy HH:mm')}"></span></div>
+      <a class="btn btn-blue" th:href="@{'/dietitian/patients/'+${p.user.id}}">Weryfikuj</a>
+    </div>
+    <p class="muted" th:if="${#lists.isEmpty(pendingPlans)}">Brak planów oczekujących na weryfikację.</p>
+  </section>
+</main></div></body></html>

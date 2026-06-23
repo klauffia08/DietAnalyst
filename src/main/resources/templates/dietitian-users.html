@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pl" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Podopieczni')}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments :: sidebar('dietitian')}"></aside>
+<main class="content">
+  <div class="topbar"><div><h1>Moi podopieczni</h1><p class="muted">Dietetyk widzi wyłącznie użytkowników przypisanych przez administratora.</p></div></div>
+  <section class="card">
+    <div style="overflow:auto"><table><thead><tr><th>Podopieczny</th><th>Cel</th><th>Dzisiaj</th><th>Aktywność 7 dni</th><th>Ostatni plan</th><th></th></tr></thead><tbody>
+      <tr th:each="p:${patients}">
+        <td><b th:text="${p.patient.name}"></b><br><span class="muted" th:text="${p.patient.email}"></span></td>
+        <td th:text="${p.patient.goal}"></td>
+        <td><b th:text="${p.today.progress()} + '%' "></b><br><span class="muted" th:text="${p.today.kcal} + '/' + ${p.today.target} + ' kcal'"></span></td>
+        <td th:text="${p.mealsLast7Days} + ' posiłków'"></td>
+        <td><span class="badge" th:text="${p.latestPlanStatus}"></span></td>
+        <td><a class="btn btn-blue" th:href="@{'/dietitian/patients/'+${p.patient.id}}">Profil i postępy</a></td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(patients)}"><td colspan="6" class="muted">Brak przypisanych podopiecznych.</td></tr>
+    </tbody></table></div>
+  </section>
+</main></div></body></html>

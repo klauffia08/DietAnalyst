@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' – DietAnalyst'">DietAnalyst</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<aside class="sidebar" th:fragment="sidebar(active)">
+  <div class="brand"><small>System PWST</small>DietAnalyst</div>
+  <div class="userbox" th:if="${currentUser != null}">
+    <strong th:text="${currentUser.name}">Użytkownik</strong>
+    <span th:text="${currentUser.role.label}">Rola</span>
+  </div>
+
+  <nav class="nav" th:if="${currentUser != null and currentUser.role.name() == 'USER'}">
+    <div class="nav-caption">Moje zdrowie</div>
+    <a th:href="@{/dashboard}" th:classappend="${active=='dashboard'}?'active'">🏠 Pulpit</a>
+    <a th:href="@{/meals}" th:classappend="${active=='meals'}?'active'">🥗 Dziennik posiłków</a>
+    <a th:href="@{/products}" th:classappend="${active=='products'}?'active'">🛒 Baza produktów</a>
+    <a th:href="@{/plans}" th:classappend="${active=='plans'}?'active'">📋 Moje plany diety</a>
+    <a th:href="@{/reports}" th:classappend="${active=='reports'}?'active'">📊 Moje raporty</a>
+    <a th:href="@{/profile}" th:classappend="${active=='profile'}?'active'">👤 Mój profil</a>
+  </nav>
+
+  <nav class="nav" th:if="${currentUser != null and currentUser.role.name() == 'DIETITIAN'}">
+    <div class="nav-caption">Panel dietetyka</div>
+    <a th:href="@{/dietitian/dashboard}" th:classappend="${active=='dietitian-dashboard'}?'active'">🏠 Pulpit dietetyka</a>
+    <a th:href="@{/dietitian/patients}" th:classappend="${active=='dietitian'}?'active'">🩺 Podopieczni</a>
+    <a th:href="@{/dietitian/plans}" th:classappend="${active=='dietitian-plans'}?'active'">✅ Plany do weryfikacji</a>
+    <a th:href="@{/products}" th:classappend="${active=='products'}?'active'">🛒 Baza produktów</a>
+  </nav>
+
+  <nav class="nav" th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}">
+    <div class="nav-caption">Administracja systemem</div>
+    <a th:href="@{/admin/dashboard}" th:classappend="${active=='admin-dashboard'}?'active'">🏠 Pulpit administratora</a>
+    <a th:href="@{/admin/users}" th:classappend="${active=='admin'}?'active'">🛡️ Użytkownicy i role</a>
+    <a th:href="@{/products}" th:classappend="${active=='products'}?'active'">🛒 Baza produktów</a>
+    <a th:href="@{/admin/audit}" th:classappend="${active=='audit'}?'active'">🧾 Dziennik zdarzeń</a>
+  </nav>
+
+  <form th:action="@{/logout}" method="post" class="logout-form">
+    <button class="btn btn-light" style="width:100%">Wyloguj</button>
+  </form>
+</aside>
+
+<div th:fragment="flash">
+  <div class="alert" th:if="${param.added}">Dane zostały zapisane.</div>
+  <div class="alert" th:if="${param.updated}">Dane zostały zaktualizowane.</div>
+  <div class="alert" th:if="${param.deleted}">Element został usunięty.</div>
+  <div class="alert" th:if="${param.saved}">Profil został zapisany.</div>
+  <div class="alert" th:if="${param.generated}">Wygenerowano nowy plan diety.</div>
+  <div class="alert" th:if="${param.submitted}">Plan wysłano do dietetyka.</div>
+  <div class="alert" th:if="${param.reviewed}">Decyzja dietetyka została zapisana.</div>
+  <div class="alert" th:if="${param.roleChanged}">Rola została zmieniona.</div>
+  <div class="alert" th:if="${param.statusChanged}">Status konta został zmieniony.</div>
+  <div class="alert" th:if="${param.assigned}">Przypisanie dietetyka zostało zapisane.</div>
+  <div class="alert error" th:if="${error}" th:text="${error}"></div>
+</div>
+</body>
+</html>
