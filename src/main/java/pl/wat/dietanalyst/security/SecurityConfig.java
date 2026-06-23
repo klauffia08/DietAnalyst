@@ -18,14 +18,13 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-// Zaktualizowane dopasowania ról
-    http.authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/login", "/register", "/css/**", "/error", "/h2-console/**").permitAll()
-            .requestMatchers("/admin/**").hasRole("ADMINISTRATOR") // Zmiana z ADMIN
-            .requestMatchers("/dietitian/**").hasRole("PRACOWNIK") // Zmiana z DIETITIAN
-            .requestMatchers("/meals/**", "/plans/**", "/reports", "/profile").hasRole("CZYTELNIK") // Zmiana z USER
-            .requestMatchers("/products/**", "/dashboard").authenticated()
-            .anyRequest().authenticated())
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/login", "/register", "/css/**", "/error", "/h2-console/**").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/dietitian/**").hasRole("DIETITIAN")
+                .requestMatchers("/meals/**", "/plans/**", "/reports", "/profile").hasRole("USER")
+                .requestMatchers("/products/**", "/dashboard").authenticated()
+                .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/dashboard", true)
